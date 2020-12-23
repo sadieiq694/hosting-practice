@@ -1,0 +1,32 @@
+.list_item {
+    list-style-type: none;
+}
+
+.submit_button {
+      background-color: grey;
+      border: none;
+      color: #4CAF50;
+      padding: 3px 15px;
+      text-align: center;
+      text-decoration: none;
+      display: inline-block;
+      font-size: 16px;
+      border-radius: 25px;
+      transition-duration: 0.4s;
+}
+
+.submit_button:hover {
+    background-color: #4CAF50; /* Green */
+    font-size: 14px;
+    color: white;
+    padding: 4px 17px;
+}
+
+.text_input {
+    background-color: white;
+    padding: 12px;
+    width: 750px;
+    font-size: 16px;
+    border-radius: 10px;
+}
+
