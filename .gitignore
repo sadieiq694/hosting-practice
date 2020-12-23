@@ -25,3 +25,9 @@ yarn-error.log*
 
 venv
 __pycache__
+
+data/
+/react-flask-app/node_modules
+trained_models/
+saved_models/
+pickle_dir/

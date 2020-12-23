@@ -97,7 +97,7 @@ PRYZANT_DATA = DATA_DIRECTORY + 'bias_data/WNC/'
 training_data = PRYZANT_DATA + 'biased.word.train'
 testing_data = PRYZANT_DATA + 'biased.word.test'
 #categories_file = PRYZANT_DATA + 'revision_topics.csv'
-pickle_directory = '../../ML/pickle_dir/'
+pickle_directory = 'pickle_dir/'
 cache_dir = DATA_DIRECTORY + 'cache/'
 model_save_dir = 'saved_models/'
 
