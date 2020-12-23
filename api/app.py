@@ -4,7 +4,7 @@ import TestSentence
 
 app = Flask(__name__)
 
-@app.route('/result', methods=['POST'])
+@app.route('/api/result', methods=['POST'])
 def api_post():
     text = request.data
     texty = text.decode('utf-8')

@@ -19,7 +19,7 @@ class Form extends React.Component {
         event.preventDefault();
         const myText = this.state.text;
         console.log("Input: " + myText);
-        axios.post("/result", {myText})
+        axios.post("/api/results", {myText})
             .then(res => {
                 this.setState({ response: [...this.state.response, res.data] })
                 //this.setState({response: res.data});//.data.text});
