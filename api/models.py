@@ -21,7 +21,7 @@ import pickle
 import os
 from pytorch_pretrained_bert.modeling import BertForTokenClassification
 from torch.nn import CrossEntropyLoss
-import argparse
+#import argparse
 import sklearn.metrics as metrics
 #from simplediff import diff
 from pytorch_pretrained_bert.tokenization import BertTokenizer

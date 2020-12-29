@@ -1,10 +1,11 @@
 from flask import Flask, request, jsonify
 import json
 import TestSentence
+import time
 
 app = Flask(__name__)
 
-@app.route('/api/result', methods=['POST'])
+@app.route('/api/results', methods=['POST'])
 def api_post():
     text = request.data
     texty = text.decode('utf-8')
