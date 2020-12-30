@@ -1,7 +1,7 @@
 import sys
 import time
-sys.path.append('c:\python38\lib\site-packages')
-sys.path.append('c:\\users\\sadie\\appdata\\roaming\\python\\python38\\site-packages')
+#sys.path.append('c:\python38\lib\site-packages')
+#sys.path.append('c:\\users\\sadie\\appdata\\roaming\\python\\python38\\site-packages')
 
 import nltk
 import numpy as np 
