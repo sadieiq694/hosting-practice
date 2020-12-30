@@ -11,6 +11,10 @@ from pymongo import MongoClient
 
 app = Flask(__name__)
 
+m_client = MongoClient("mongodb://3.134.119.225")
+db = m_client.sentence_results
+collection = db.res
+
 @app.route('/api/results', methods=['POST'])
 def api_post():
     print("GET RESULTS!")
@@ -37,8 +41,5 @@ def hello():
     return "<h1 style='color:blue'>Hello there!</h1>"'''
 
 if __name__=="__main__":
-    m_client = MongoClient("mongodb://3.134.119.225")
-    db = m_client.sentence_results
-    collection = db.res
     print("RUNNING")
     app.run(host="0.0.0.0")
