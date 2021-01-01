@@ -251,6 +251,7 @@ def test_sentence(s):
         tok_num_labels=tok_num_labels, 
         cache_dir=cache_dir,
         tok2id=tok2id)'''
+    # using new models with linguistic features
     model = BertForMultitaskWithFeatures.from_pretrained(
         'bert-base-uncased', LEXICON_DIRECTORY,
         cls_num_labels=cls_num_labels,
@@ -261,7 +262,6 @@ def test_sentence(s):
     # Load model
     print("Loading Model")
     saved_model_path = model_save_dir + 'features.ckpt'
-    #'C:\Users\sadie\Documents\fall2020\ec463\21-22-newsbias\ML\saved_models\model_3.ckpt'
     model.load_state_dict(torch.load(saved_model_path, map_location=torch.device("cpu")))
 
     tokens = tokenizer.tokenize(s)
@@ -271,7 +271,6 @@ def test_sentence(s):
 
     #print(ids)
     ids = torch.LongTensor(ids)
-    #ids = ids.type(torch.LongTensor)
     #print(ids, ids.size())
     ids = ids.unsqueeze(0)
     #print(ids, ids.size(1))
@@ -281,7 +280,6 @@ def test_sentence(s):
 
 def output(sentence):
 #sentence = "the 51 day stand ##off and ensuing murder of 76 men , women , and children - - the branch david ##ians - - in wa ##co , texas"
-    start_time = time.time()
 
     print("TEST ", sentence)
     out, length = test_sentence(sentence) 
@@ -290,27 +288,4 @@ def output(sentence):
     words = out['input_toks'][0][:length]
     bias_values = out['tok_probs'][0][:length]
 
-    avg_sum = 0
-    most_biased_words = []
-
-    output = ""
-    max_biased = words[0]
-    max_score = bias_values[0][1]
-
-    for word, l in zip(words, bias_values):
-        #print(l.index(max(l)))
-        if l[1] > max_score:
-            max_biased = word
-            max_score = l[1] 
-        avg_sum += l[1]
-        output += word + " " + "{:.5f}".format(l[1]) + "\n"
-        if l[1] >= 0.45:
-            most_biased_words.append(word)
-
-    print("Average bias: ", avg_sum/length)
-
-    output += "Average bias: " + "{:.5f}".format(avg_sum/length) + "\n"
-    output += 'Most biased word: ' + max_biased + " " + "{:.5f}".format(max_score) + "\n" #str(max_score) #
-    output += "Runtime:" + str(time.time() - start_time) + " seconds\n"
-
-    return output
+    return words, bias_values 

@@ -18,17 +18,52 @@ collection = db.res
 @app.route('/api/results', methods=['POST'])
 def api_post():
     print("GET RESULTS!")
+    start_time = time.time()
+
+    # get text and format it
     text = request.data
     texty = text.decode('utf-8')
-    dictionary = json.loads(texty)
+    dictionary = json.loads(texty) # why are we loading it into a dictionary and then back out? 
     print(dictionary['myText'])
     var = dictionary['myText'].lower()
-    results = TestSentence.output(var)
+    # remove punctuation here 
+
+    # Run through algorithm 
+    words, bias_values =  TestSentence.output(var)
+
+    # Format output string 
+    avg_sum = 0
+    max_biased = words[0]
+    max_score = bias_values[0][1]    
+    most_biased_words = []
+    b_val_out = []
+    output = ""
+    for word, l in zip(words, bias_values):
+        #print(l.index(max(l)))
+        if l[1] > max_score:
+            max_biased = word
+            max_score = l[1] 
+        avg_sum += l[1]
+        output += word + " " + "{:.5f}".format(l[1]) + "\n"
+        b_val_out.append(l[1])
+        if l[1] >= 0.45:
+            most_biased_words.append(word)
+
+    print("Average bias: ", avg_sum/len(words))
+    output += "Average bias: " + "{:.5f}".format(avg_sum/len(words)) + "\n"
+    output += 'Most biased word: ' + max_biased + " " + "{:.5f}".format(max_score) + "\n" #str(max_score) #
+    output += "Runtime:" + str(time.time() - start_time) + " seconds\n"
+    
+    # Insert data to database
+    db_entry = {}
+    db_entry['words'] = words
+    db_entry['bias_vals'] = b_val_out
+    db_entry['most_biased'] = most_biased_words
     print("Adding results to DB:")
-    db_res = {"sentence string": results}
-    collection.insert_one(db_res)
+    collection.insert_one(db_entry)
     print("INSERTED TO DB!")
-    return results #jsonify(text=results)
+
+    return output #jsonify(text=results)
 
 
 @app.route('/api/time')
