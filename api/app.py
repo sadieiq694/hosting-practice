@@ -32,6 +32,8 @@ def api_post():
     words, bias_values =  TestSentence.output(var)
 
     # Format output string 
+    # starts as python dictionary which we will convert to a json string
+    outWordsScores = []
     avg_sum = 0
     max_biased = words[0]
     max_score = bias_values[0][1]    
@@ -39,21 +41,25 @@ def api_post():
     b_val_out = []
     output = ""
     for word, l in zip(words, bias_values):
-        #print(l.index(max(l)))
         if l[1] > max_score:
             max_biased = word
             max_score = l[1] 
         avg_sum += l[1]
-        output += word + " " + "{:.5f}".format(l[1]) + "\n"
+        outWordsScores.append(word + ": " + "{:.5f}".format(l[1]) + " ")
         b_val_out.append(l[1])
         if l[1] >= 0.45:
             most_biased_words.append(word)
 
+    results = {
+        "words" : outWordsScores,
+        "average": "{:.5f}".format(avg_sum/len(words)),
+        "max_biased_word": max_biased.upper() + ": " + "{:.5f}".format(max_score),
+        "max_word": max_biased.upper(),
+        "runtime":  str(time.time() - start_time) + " seconds\n"
+    } 
+
     print("Average bias: ", avg_sum/len(words))
-    output += "Average bias: " + "{:.5f}".format(avg_sum/len(words)) + "\n"
-    output += 'Most biased word: ' + max_biased + " " + "{:.5f}".format(max_score) + "\n" #str(max_score) #
-    output += "Runtime:" + str(time.time() - start_time) + " seconds\n"
-    
+
     # Insert data to database
     db_entry = {}
     db_entry['words'] = words
@@ -63,7 +69,7 @@ def api_post():
     collection.insert_one(db_entry)
     print("INSERTED TO DB!")
 
-    return output #jsonify(text=results)
+    return json.dumps(results) #jsonify(text=results)
 
 
 @app.route('/api/time')
