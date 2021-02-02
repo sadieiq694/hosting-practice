@@ -10,7 +10,7 @@ client = MongoClient("mongodb://3.134.119.225")
 
 db = client.sentence_results
 
-document = {"TEST ENTRY": "hi my name is Sadie"}
+#document = {"TEST ENTRY": "hi my name is Sadie"}
 #db.res.insert_one(document)
 
 print(db.res.count())

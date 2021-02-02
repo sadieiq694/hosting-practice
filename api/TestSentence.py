@@ -7,6 +7,7 @@ import time
 #sys.path.append('..\..\ML')
 
 import numpy as np
+import random
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -33,6 +34,9 @@ from pytorch_pretrained_bert.modeling import BertPreTrainedModel
 
 from features import FeatureGenerator # might not need this
 from models import AddCombine, BertForMultitaskWithFeatures, BertForMultitask
+
+# Set the seed value all over the place to make this reproducible.
+# This should get rid of non-determinism
 
 CUDA = (torch.cuda.device_count() > 0)
 if CUDA:
@@ -173,6 +177,20 @@ POS_TAGS = [
   '<UNK>' # unknown
 ]
 
+POS2ID = {x: i for i, x in enumerate(POS_TAGS)}
+
+EDIT_TYPE2ID = {'0':0, '1':1, 'mask':2}
+
+tokenizer = BertTokenizer.from_pretrained('bert-base-uncased', os.getcwd() + '/cache')
+tok2id = tokenizer.vocab
+tok2id['<del>'] = len(tok2id)
+
+# BERT initialization params
+config = 'bert-base-uncased'
+cls_num_labels = 43
+tok_num_labels = 3
+tok2id = tok2id
+
 
 # PADDING TO MAX_SEQ_LENGTH
 def pad(id_arr, pad_idx):
@@ -190,6 +208,7 @@ def to_probs(logits, lens):
 
 # Take one sentence ... 
 def run_inference(model, ids, tokenizer):
+
     #global ARGS
     # we will pass in one sentence, no post_toks, 
 
@@ -229,28 +248,29 @@ def run_inference(model, ids, tokenizer):
     return out
 
 
-def test_sentence(s): 
-    POS2ID = {x: i for i, x in enumerate(POS_TAGS)}
+def test_sentence(model, s): 
+    tokens = tokenizer.tokenize(s)
+    #print(tokens)
+    length = len(tokens)
+    ids = pad([tok2id.get(x, 0) for x in tokens], 0)
 
-    EDIT_TYPE2ID = {'0':0, '1':1, 'mask':2}
+    #print(ids)
+    ids = torch.LongTensor(ids)
+    #print(ids, ids.size())
+    ids = ids.unsqueeze(0)
+    #print(ids, ids.size(1))
+    
+    model.eval()
+    output = run_inference(model, ids, tokenizer)
+    return output, length
 
-    tokenizer = BertTokenizer.from_pretrained('bert-base-uncased', os.getcwd() + '/cache')
-    tok2id = tokenizer.vocab
-    tok2id['<del>'] = len(tok2id)
+def output(sentences):
+    # Takes a list of sentences = [s1, s2, s3]
+    # Returns list of tokens and list of corresponding bias scores for each sentence
+    #   So, list of lists: 
+    #       word_list = [[w1,w2,...wn_1], . . . [w1, w2, ... wn_2]]
+    #       bias_list = [[0.1,0.33, ... 0.02], . . .[0.9, 0.002, ... 0.5]]
 
-    # BERT initialization params
-    config = 'bert-base-uncased'
-    cls_num_labels = 43
-    tok_num_labels = 3
-    tok2id = tok2id
-
-    # define model!!
-    '''model = BertForMultitask.from_pretrained(
-        'bert-base-uncased',
-        cls_num_labels=cls_num_labels,
-        tok_num_labels=tok_num_labels, 
-        cache_dir=cache_dir,
-        tok2id=tok2id)'''
     # using new models with linguistic features
     model = BertForMultitaskWithFeatures.from_pretrained(
         'bert-base-uncased', LEXICON_DIRECTORY,
@@ -260,32 +280,21 @@ def test_sentence(s):
         lexicon_feature_bits=1)
 
     # Load model
-    print("Loading Model")
+    #print("Loading Model")
     saved_model_path = model_save_dir + 'features.ckpt'
     model.load_state_dict(torch.load(saved_model_path, map_location=torch.device("cpu")))
 
-    tokens = tokenizer.tokenize(s)
-    print(tokens)
-    length = len(tokens)
-    ids = pad([tok2id.get(x, 0) for x in tokens], 0)
+    word_list = []
+    bias_list = []
+    for sentence in sentences: 
+        print(sentence)
+        out, length = test_sentence(model, sentence) 
+        #print("Results:")
 
-    #print(ids)
-    ids = torch.LongTensor(ids)
-    #print(ids, ids.size())
-    ids = ids.unsqueeze(0)
-    #print(ids, ids.size(1))
+        bias_val = out['tok_probs'][0][:length]
+        prob_bias = [b[1] for b in bias_val]
 
-    output = run_inference(model, ids, tokenizer)
-    return output, length
+        word_list.append(out['input_toks'][0][:length])
+        bias_list.append(prob_bias)
 
-def output(sentence):
-#sentence = "the 51 day stand ##off and ensuing murder of 76 men , women , and children - - the branch david ##ians - - in wa ##co , texas"
-
-    print("TEST ", sentence)
-    out, length = test_sentence(sentence) 
-    print("Results:")
-
-    words = out['input_toks'][0][:length]
-    bias_values = out['tok_probs'][0][:length]
-
-    return words, bias_values 
+    return word_list, bias_list 
