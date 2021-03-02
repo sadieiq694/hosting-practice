@@ -1,42 +1,31 @@
-# Imports
-#from pytorch_pretrained_bert.modeling import PreTrainedBertModel, BertModel, BertSelfAttention
+#################
+#### Imports ####
+#################
 import sys
 import time
-#sys.path.append('c:\python38\lib\site-packages')
-#sys.path.append('c:\\users\\sadie\\appdata\\roaming\\python\\python38\\site-packages')
-#sys.path.append('..\..\ML')
+import os
+
+sys.path.append('../../ML')
+sys.path.append('c:\python38\lib\site-packages')
+sys.path.append('c:\\users\\sadie\\appdata\\roaming\\python\\python38\\site-packages')
+sys.path.append('..\..\ML')
 
 import numpy as np
-import random
+import statistics
+
+# torch imports
 import torch
 import torch.nn as nn
 import torch.optim as optim
+
+# pretrained BERT imports
 import pytorch_pretrained_bert.modeling as modeling
-#import copy
-#from collections import defaultdict
-from torch.utils.data import TensorDataset, DataLoader, RandomSampler
-
-from tqdm import tqdm
-import sys
-
-import pickle
-import os
-from pytorch_pretrained_bert.modeling import BertForTokenClassification
-from torch.nn import CrossEntropyLoss
-#from tensorboardX import SummaryWriter
-#import argparse
-import sklearn.metrics as metrics
-#from simplediff import diff
+from pytorch_pretrained_bert.modeling import BertModel, BertSelfAttention, BertPreTrainedModel, BertForTokenClassification
 from pytorch_pretrained_bert.tokenization import BertTokenizer
-# from pytorch_pretrained_bert.optimization import BertAdam
-from pytorch_pretrained_bert.modeling import BertModel, BertSelfAttention
-from pytorch_pretrained_bert.modeling import BertPreTrainedModel
 
-from features import FeatureGenerator # might not need this
-from models import AddCombine, BertForMultitaskWithFeatures, BertForMultitask
-
-# Set the seed value all over the place to make this reproducible.
-# This should get rid of non-determinism
+# other user scripts
+from myfeatures import FeatureGenerator # might not need this
+from models import AddCombine, BertForMultitaskWithFeatures #, BertForMultitask
 
 CUDA = (torch.cuda.device_count() > 0)
 if CUDA:
@@ -44,67 +33,21 @@ if CUDA:
     input()
 
 #####################
-### DIF #############
+### Softmax #############
 #####################
 def softmax(x, axis=None):
   x=x-x.max(axis=axis, keepdims=True)
   y= np.exp(x)
   return y/y.sum(axis=axis, keepdims=True)
 
-def diff(old, new):
-
-    # Create a map from old values to their indices
-    old_index_map = dict()
-    for i, val in enumerate(old):
-        old_index_map.setdefault(val,list()).append(i)
-
-
-    overlap = dict()
-
-    sub_start_old = 0
-    sub_start_new = 0
-    sub_length = 0
-
-    for inew, val in enumerate(new):
-        _overlap = dict()
-        for iold in old_index_map.get(val,list()):
-            # now we are considering all values of iold such that
-            # `old[iold] == new[inew]`.
-            _overlap[iold] = (iold and overlap.get(iold - 1, 0)) + 1
-            if(_overlap[iold] > sub_length):
-                # this is the largest substring seen so far, so store its
-                # indices
-                sub_length = _overlap[iold]
-                sub_start_old = iold - sub_length + 1
-                sub_start_new = inew - sub_length + 1
-        overlap = _overlap
-
-    if sub_length == 0:
-        # If no common substring is found, we return an insert and delete...
-        return (old and [('-', old)] or []) + (new and [('+', new)] or [])
-    else:
-        # ...otherwise, the common substring is unchanged and we recursively
-        # diff the text before and after that substring
-        return diff(old[ : sub_start_old], new[ : sub_start_new]) + \
-               [('=', new[sub_start_new : sub_start_new + sub_length])] + \
-               diff(old[sub_start_old + sub_length : ],
-                       new[sub_start_new + sub_length : ])
-
 ##########################################################
 #### SET UP ID DICTIONARIES FOR WORDS, RELATIONS, POS ####
 ##########################################################
 ## UPDATE THESE!!!
-DATA_DIRECTORY = 'data/'
+DATA_DIRECTORY = '../../ML/data/'
 LEXICON_DIRECTORY = DATA_DIRECTORY + 'lexicons/'
-PRYZANT_DATA = DATA_DIRECTORY + 'bias_data/WNC/'
-#IMPORTS = 
-training_data = PRYZANT_DATA + 'biased.word.train'
-testing_data = PRYZANT_DATA + 'biased.word.test'
-#categories_file = PRYZANT_DATA + 'revision_topics.csv'
-pickle_directory = 'pickle_dir/'
 cache_dir = DATA_DIRECTORY + 'cache/'
-model_save_dir = 'saved_models/'
-
+model_save_dir = '../../ML/saved_models/'
 
 RELATIONS = [
   'det', # determiner (the, a)
@@ -181,15 +124,14 @@ POS2ID = {x: i for i, x in enumerate(POS_TAGS)}
 
 EDIT_TYPE2ID = {'0':0, '1':1, 'mask':2}
 
-tokenizer = BertTokenizer.from_pretrained('bert-base-uncased', os.getcwd() + '/cache')
-tok2id = tokenizer.vocab
-tok2id['<del>'] = len(tok2id)
-
 # BERT initialization params
 config = 'bert-base-uncased'
 cls_num_labels = 43
 tok_num_labels = 3
-tok2id = tok2id
+
+tokenizer = BertTokenizer.from_pretrained(config, os.getcwd() + '/cache')
+tok2id = tokenizer.vocab
+tok2id['<del>'] = len(tok2id)
 
 
 # PADDING TO MAX_SEQ_LENGTH
@@ -207,64 +149,58 @@ def to_probs(logits, lens):
     return out
 
 # Take one sentence ... 
-def run_inference(model, ids, tokenizer):
-
+def run_inference(model, ids): #, tokenizer):
     #global ARGS
     # we will pass in one sentence, no post_toks, 
 
     out = {
-        'input_toks': [],
-        #'tok_loss': [],
+        'input_toks': [], # text input
         'tok_logits': [],
-        'tok_probs': []
-        #'tok_labels': [],
-        #'labeling_hits': []
-        #'input_len': 0
+        'tok_probs': [] # bias probabilities
     }
 
-    #for step, batch in enumerate(tqdm(eval_dataloader)):
-        #if False and step > 2:
-        #    continue
-    #if CUDA:
-    #    batch = tuple(x.cuda() for x in batch)
     pre_len = len(ids)
 
     with torch.no_grad():
         _, tok_logits = model(ids, attention_mask=None,
             rel_ids=None, pos_ids=None, categories=None,
             pre_len=None) # maybe pre_len
-        #tok_loss = loss_fn(tok_logits, tok_label_id, apply_mask=tok_label_id)
+    
     out['input_toks'] += [tokenizer.convert_ids_to_tokens(seq) for seq in ids.cpu().numpy()]
-    #out['post_toks'] += [tokenizer.convert_ids_to_tokens(seq) for seq in post_in_id.cpu().numpy()]
-    #out['tok_loss'].append(float(tok_loss.cpu().numpy()))
     logits = tok_logits.detach().cpu().numpy()
-    #labels = tok_label_id.cpu().numpy()
     out['tok_logits'] += logits.tolist()
-    #out['tok_labels'] += labels.tolist()
     out['tok_probs'] += to_probs(logits, pre_len)
-    #out['input_len'] = pre_len
-    #out['labeling_hits'] += tag_hits(logits, labels)
 
     return out
 
-
 def test_sentence(model, s): 
     tokens = tokenizer.tokenize(s)
-    #print(tokens)
     length = len(tokens)
-    ids = pad([tok2id.get(x, 0) for x in tokens], 0)
-
-    #print(ids)
-    ids = torch.LongTensor(ids)
-    #print(ids, ids.size())
-    ids = ids.unsqueeze(0)
-    #print(ids, ids.size(1))
     
-    model.eval()
-    output = run_inference(model, ids, tokenizer)
+    # get tokens from BERT
+    ids = pad([tok2id.get(x, 0) for x in tokens], 0)
+    ids = torch.LongTensor(ids)
+    ids = ids.unsqueeze(0)
+    
+    model.eval() # constant random seed
+    output = run_inference(model, ids) #, tokenizer)
     return output, length
 
+def changeRange(old_range, new_range, value):
+    # given an old range, new range, and value in the old range, 
+    # maps it to the new range
+    # we will use old_range[0,1] new_range [0,10]
+    (old_min, old_max), (new_min, new_max) = old_range, new_range
+    return  new_min + ((value - old_min) * (new_max - new_min) / (old_max - old_min))
+
 def output(sentences):
+    results = {}
+    word_score_list = []
+    preformatted_words = []
+    preformatted_scores = []
+    results['sentence_results'] = []
+    #print('sentences:', sentences)
+    #print("New testsentence code!")
     # Takes a list of sentences = [s1, s2, s3]
     # Returns list of tokens and list of corresponding bias scores for each sentence
     #   So, list of lists: 
@@ -273,21 +209,21 @@ def output(sentences):
 
     # using new models with linguistic features
     model = BertForMultitaskWithFeatures.from_pretrained(
-        'bert-base-uncased', LEXICON_DIRECTORY,
+        config, LEXICON_DIRECTORY,
         cls_num_labels=cls_num_labels,
         tok_num_labels=tok_num_labels,
         tok2id=tok2id, 
         lexicon_feature_bits=1)
 
     # Load model
-    #print("Loading Model")
     saved_model_path = model_save_dir + 'features.ckpt'
     model.load_state_dict(torch.load(saved_model_path, map_location=torch.device("cpu")))
 
     word_list = []
     bias_list = []
-    for sentence in sentences: 
-        print(sentence)
+    for sentence in sentences:
+        sentence=sentence.lower() 
+        #print(sentence)
         out, length = test_sentence(model, sentence) 
         #print("Results:")
 
@@ -297,4 +233,87 @@ def output(sentences):
         word_list.append(out['input_toks'][0][:length])
         bias_list.append(prob_bias)
 
-    return word_list, bias_list 
+    #print("LENGTHS:", len(word_list), len(bias_list))
+
+    scaled_bias_scores = []
+    num = 0
+    for words, biases in zip(word_list, bias_list):
+        # Format output string 
+        # starts as python dictionary which we will convert to a json string
+        outWordsScores = []
+        avg_sum = 0
+        max_biased = words[0]
+        max_score = biases[0]   
+        most_biased_words = []
+        for word, score in zip(words, biases):
+            preformatted_words.append(word)
+            preformatted_scores.append(score)
+            if score > max_score:
+                max_biased = word
+                max_score = score
+            avg_sum += score
+            if len(word) >= 3 and word[:2] == "##":
+                # stuff
+                last_word_score = outWordsScores[-1]
+                #print(last_word_score, word, score)
+                outWordsScores[-1][0] = last_word_score[0] + word[2:]
+                outWordsScores[-1][1] = max(last_word_score[1], score)
+            else:
+                outWordsScores.append([word, score])
+            if score >= 0.45:
+                most_biased_words.append(word)
+        
+        # one of these per sentence
+        bias_score = changeRange([0,1], [0,10], max_score)
+        scaled_bias_scores.append(bias_score)
+        #print("Scaled bias scores: ", scaled_bias_scores)
+
+        #print("max biased and max score:", max_biased, max_score)
+        num = num + 1
+        s_level_results = {
+            "words" : outWordsScores,
+            "average": "{:.5f}".format(avg_sum/len(words)),
+            "max_biased_word": max_biased + ": " + "{:.5f}".format(max_score),
+            "bias_score":bias_score,
+            "order":num
+        } 
+
+        results['sentence_results'].append(s_level_results)
+    
+    '''formatted_words = []
+    formatted_scores = []
+    for word, score in zip(preformatted_words, preformatted_scores):
+        if len(word) >= 3 and word[:2] == "##":
+            # stuff
+            last_word = formatted_words[-1]
+            formatted_words[-1] = last_word + word[2:]
+            last_score = formatted_scores[-1]
+            formatted_scores[-1] = (last_score + score)/2
+        else:
+            formatted_words.append(word)
+            formatted_scores.append(score)
+
+    print(len(formatted_scores), len(formatted_words))
+    for word, score in zip(formatted_words, formatted_scores): 
+        word_score_list.append({'word':word, 'score':score}) # add type later!
+    results['article_score'] = statistics.mean(top_twenty_fifth)'''
+
+
+    # Full article data
+    # Sort scaled bias score largest to smallest: 
+    scaled_bias_scores.sort(reverse=True)
+    upper_bound = int(len(scaled_bias_scores)/2)
+
+    if upper_bound == 0:
+        upper_bound = 1
+
+    top_twenty_fifth = scaled_bias_scores[:upper_bound]
+    results['word_list'] = word_score_list
+    results['article_score'] = statistics.mean(top_twenty_fifth)
+
+
+    #print(results['article_score'])
+
+    #print('DONE IN TEST SENTENCE')
+    
+    return results 

@@ -8,10 +8,12 @@ import pandas as pd
 import TestSentence
 import statistics
 
-sentences = [
-    'America has the best economy and strongest military in the world.',
-    'America has the best economy and strongest military in the world.', 
-    'America has the highest GDP and military spending in the world.']
+
+
+article = 'America has the best economy and strongest military in the world America has the best economy and strongest military in the world. our recent elections were rigged and fraudulent'
+sentences = article.split('.')
+print(sentences)
+input()
 sentences_l = [s.lower() for s in sentences]
 print(sentences_l)
 word_list, bias_list = TestSentence.output(sentences_l)
