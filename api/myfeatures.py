@@ -21,6 +21,9 @@ class FeatureGenerator:
         self.pos2id = pos2id
         self.rel2id = rel2id
 
+        print(os.getcwd())
+        lexicon_path = "data/lexicons/"
+
         self.lexicons = {
             'assertives': self.read_lexicon(lexicon_path + 'assertives_hooper1975.txt'),
             'entailed_arg': self.read_lexicon(lexicon_path + 'entailed_arg_berant2012.txt'),

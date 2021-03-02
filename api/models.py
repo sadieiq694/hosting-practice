@@ -29,7 +29,7 @@ from pytorch_pretrained_bert.optimization import BertAdam
 from pytorch_pretrained_bert.modeling import BertModel, BertSelfAttention
 from pytorch_pretrained_bert.modeling import BertPreTrainedModel
 
-from features import FeatureGenerator
+from myfeatures import FeatureGenerator
 
 CUDA = (torch.cuda.device_count() > 0)
 if CUDA:

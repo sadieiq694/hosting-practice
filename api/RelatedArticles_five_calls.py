@@ -1,4 +1,8 @@
-from newsapi import NewsApiClient
+import sys
+#sys.path.append("c:\python38\lib\site-packages")
+
+#from newsapi import NewsApiClient
+from newsapi.newsapi_client import NewsApiClient
 import json
 import random
 import requests

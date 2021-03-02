@@ -44,10 +44,11 @@ def softmax(x, axis=None):
 #### SET UP ID DICTIONARIES FOR WORDS, RELATIONS, POS ####
 ##########################################################
 ## UPDATE THESE!!!
-DATA_DIRECTORY = '../../ML/data/'
+DATA_DIRECTORY = 'data/'
 LEXICON_DIRECTORY = DATA_DIRECTORY + 'lexicons/'
 cache_dir = DATA_DIRECTORY + 'cache/'
-model_save_dir = '../../ML/saved_models/'
+model_save_dir = 'saved_models/'
+saved_model_path = 'saved_models/features.ckpt'
 
 RELATIONS = [
   'det', # determiner (the, a)
