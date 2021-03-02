@@ -1,0 +1,113 @@
+.scraper-wrapper {
+    border: 2px solid rgb(66, 66, 66);
+    border-radius: 12px;
+    margin: auto;
+    width: 50%;
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
+
+.webscraper-results-list {
+    list-style-type: none;
+}
+
+.webscraper-result-label {
+    font-weight: bold;
+}
+
+.webscraper-result {
+    padding-left: 10px;
+}
+
+.webscraper-result-wrapper {
+    display: grid;
+    grid-template-columns: 20% 80%;
+    width: 80%;
+    margin: auto;
+    border: 2px solid lightblue;
+    background-color: rgb(245, 253, 253);
+    border-radius: 12px;
+    margin-top: 20px;
+    margin-bottom: 20px;
+    padding-top: 5px;
+    padding-bottom: 5px;
+}
+
+.webscraper-article-content-list {
+    list-style-type: none;
+}
+
+.individual-sentence-wrapper {
+    display: grid;
+    grid-template-columns: 50% 50%;
+    width: 90%;
+    text-align: center;
+    border-bottom: 1px solid black;
+}
+
+.individual-sentence-wrapper:hover {
+    cursor: pointer;
+    background-color: rgb(214, 253, 253);
+}
+
+.sentences-header {
+    display: grid;
+    grid-template-columns: 50% 50%;
+    width: 80%;
+    text-align: center;
+    font-weight: bold;
+}
+
+.expanded-sentence-wrapper {
+    background-color: rgba(255, 255, 255, 0.651);
+    display: grid;
+    grid-template-columns: 35% 30% 35%;
+    border-radius: 25px;
+}
+
+.sentence-score {
+    width: 25%;
+    margin: auto;
+    border-radius: 12px;
+    border: 1px solid black;
+}
+
+.score-runtime-wrapper {
+    display: grid;
+    grid-template-columns: 50% 50%;
+}
+
+.webscraper-article-numbers {
+    height: auto;
+    font-size: 40px;
+}
+
+.sort-wrapper {
+    display: grid;
+    grid-template-columns: 20% 80%;
+    border: 1px solid black;
+    margin-right: 10px;
+}
+
+.sort-button {
+    margin: auto;
+    background-color: white;
+    border: 1px solid black;
+    border-radius: 12px;
+    padding: 5px;
+}
+
+.sort-button:hover {
+    background-color: whitesmoke;
+    cursor: pointer;
+}
+
+.sorting-by {
+    font-size: 20px;
+}
+
+.related-article-link {
+    margin-left: 5px;
+    margin-right: 5px;
+    color: black;
+}
